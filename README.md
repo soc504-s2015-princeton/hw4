@@ -1,6 +1,6 @@
 # hw4
 homework 4: logistic regression
 
-[![Build Status]https://travis-ci.org/soc504-s2015-princeton/hw4.svg]
+[![Build Status]https://travis-ci.org/soc504-s2015-princeton/hw4.svg](https://travis-ci.org/soc504-s2015-princeton/hw4)
 
 
