@@ -1,6 +1,6 @@
 ---
 title: "Homework 4: Logistic regression and judges"
-author: "your name here"
+author: "Gozde Guran"
 date: "Due: Sunday, April 19, 2015"
 output: html_document
 ---
@@ -22,7 +22,14 @@ The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regre
 
 
 ```{r}
-# [your code here]
+library(dplyr)
+library(ggplot2)
+library(broom)
+data <- read.table("data/Greene.txt")
+data <- tbl_df(data)
+# head(data)
+# dim(data)
+# names(data)
 ```
 
 Before doing anything else, just play with the data to get a sense of it.
@@ -30,43 +37,77 @@ Before doing anything else, just play with the data to get a sense of it.
 (@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
 
 ```{r}
-# [your code here]
+data %>%
+  summarise(prop_granted = mean(decision == "yes"))
 ```
 
 (@) There are 12 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
 
 ```{r}
-# [your code here]
+
+ggplot(data, aes(x = judge, fill = judge)) + 
+  stat_bin(type = "identity", width = 0.75) + 
+  labs(title = "The Number of Appeals per Judge", x = "Judges", y = "Appeals") +
+  coord_flip() 
+  
 ```
 
 (@) Now plot the rate at which the judges grant appeals. 
 
 ```{r}
-# [your code here]
+data <- data %>%
+  group_by(judge) %>%
+  mutate(appeal_rate = sum(decision == "yes")/length(decision))
+
+ggplot(data, aes(x = judge, y = appeal_rate, color = judge)) + 
+  geom_point(size = 5) +
+  labs(title = "Appeal Rates per Judge", x = "Judges", y = "Rate of Appeal") +
+  coord_flip()
+  
 ```
 
-(@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whetheran appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
+(@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whether an appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
 
 ```{r}
-# [your code here]
+levels(data$judge)
+data <- within(data, judge <- relevel(judge, ref = "Iacobucci"))
+levels(data$judge)
+
+model1 <- glm(decision ~ judge, data = data, family = "binomial")
+model1 <- tidy(model1)
 ```
 
 (@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
 
 ```{r}
-# [your code here]
+# Predicted probability for Judge Marceau
+
+(exp(model1$estimate[1] + model1$estimate[7])) / (1 + exp(model1$estimate[1] + model1$estimate[7]))
+
+# I couldn't manage to call the estimates with reference judge names instead of numbers. 
+
 ```
 
 (@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
 
 ```{r}
-# [your code here]
+class(data$judge) # Already a factor variable
+data <- within(data, location <- relevel(location, ref = "other")) # set reference category for location as "other"
+levels(data$location) 
+data <- within(data, language <- relevel(language, ref = "French")) # set reference category for language as French
+levels(data$language) 
+model2 <- glm(decision ~ judge + rater + language, data = data, family = "binomial")
+# model2 <- tidy(model2) # Apparently since this forces the model into a data frame, the predict function below wouldn't work. It only accepts objects of class glm or lm for the first argument so I kept it as it is.
+model2
 ```
 
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-# [your code here]
+df_case <- with(data, data.frame(judge = "Marceau", rater = "yes", location = "Toronto", language = "English"))
+df_case
+df_case$pred_prob <- predict(model2, newdata = df_case, type = "response")
+df_case
 ```
 
 
