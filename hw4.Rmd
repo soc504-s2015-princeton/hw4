@@ -1,6 +1,6 @@
 ---
 title: "Homework 4: Logistic regression and judges"
-author: "your name here"
+author: "Kalyani Jayasankar"
 date: "Due: Sunday, April 19, 2015"
 output: html_document
 ---
@@ -22,51 +22,111 @@ The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regre
 
 
 ```{r}
-# [your code here]
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+suppressMessages(library(broom))
+suppressMessages(library(RColorBrewer))
+
+data <- read.table("data/Greene.txt")
+
 ```
 
 Before doing anything else, just play with the data to get a sense of it.
 
-(@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
+(@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proportion of cases did the judge grant an appeal.
 
 ```{r}
-# [your code here]
+yes <- data %>%
+  filter(decision == "yes") %>%
+  summarise(yes <- n())
+
+prop_yes <- yes/length(data$decision)
+prop_yes
+  
 ```
 
 (@) There are 12 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
 
 ```{r}
-# [your code here]
+judge_cases <- data %>%
+  group_by(judge) %>%
+  summarise(sum_cases = n())
+
+p <- ggplot(judge_cases, aes(x = judge, y = sum_cases, fill = judge)) + geom_bar(stat = "identity") +  labs(x = "Judge", y = "Number of cases") + ggtitle("Number of cases per judge") + scale_fill_hue(c = 30, l = 80) + theme(axis.text.x = element_blank())
+
+p
+
 ```
 
 (@) Now plot the rate at which the judges grant appeals. 
 
 ```{r}
-# [your code here]
+
+judge_yes <- data %>%
+  group_by(judge, decision) %>%
+  filter(decision == "yes") %>%
+  summarise(yes = n())
+
+judge_cases$yes <- judge_yes$yes
+
+judge_cases <- judge_cases %>%
+  mutate(prop_yes = (yes/sum_cases))
+
+p <- ggplot(judge_cases, aes(x = judge, y = prop_yes, fill = judge)) + geom_bar(stat = "identity") + scale_fill_hue(c = 30, l = 80) + labs(x = "Judge", y = "Rate of Appeals") + ggtitle("Rate of appeals per judge") + theme(axis.text.x = element_blank())
+
+p
+  
 ```
 
-(@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whetheran appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
+(@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whether an appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
 
 ```{r}
-# [your code here]
+data$judge <- relevel(as.factor(data$judge), ref = "Iacobucci")
+fit <- glm(decision ~ judge, data = data, family = "binomial")
+
+table <- tidy(fit)
+table
 ```
 
 (@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
 
 ```{r}
-# [your code here]
+#The estimate we have is in the log odds form. We need to turn it in to the probability.
+
+x <- exp(- table$estimate[1] - table$estimate[7])
+
+pp_marceau <- 1/(1 + x)
+pp_marceau
+
+
 ```
 
 (@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
 
 ```{r}
-# [your code here]
+
+#Setting other and French as the reference categories
+
+data$location <- relevel(as.factor(data$location), ref = "other")
+data$language <- relevel(as.factor(data$language), ref = "French")
+
+fit <- glm(decision ~ judge + rater + location + language, data = data, family = "binomial")
+
+table2 <- tidy(fit)
+table2
+  
 ```
 
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-# [your code here]
+
+case <- with(data, data.frame(judge = "Marceau", rater = "yes", location = "Toronto", language = "English"))
+
+case$pp <- predict(fit, newdata = case, type = "response")
+
+case
+
 ```
 
 
@@ -75,5 +135,3 @@ Before doing anything else, just play with the data to get a sense of it.
 ```{r echo=FALSE}
 sessionInfo()
 ```
-
-
