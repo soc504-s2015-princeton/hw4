@@ -132,13 +132,13 @@ data %>%
 # "English" is coded as 1, "French" is coded as 2
 
 
-data <- within(data, 
-               location <- relevel(location, ref = "other")) #relevel factors
-data <- within(data, 
-               language <- relevel(language, ref = "French")) #relevel factors
+data <- within(data,
+  location <- relevel(location, ref = "other")) #relevel factors
+data <- within(data,
+  language <- relevel(language, ref = "French")) #relevel factors
 
-mylogit2 <- glm(decision ~ judge + rater + location + language, 
-                data = data, family = "binomial")
+mylogit2 <- glm(decision ~ judge + rater + location + language,
+  data = data, family = "binomial")
 
 summary (mylogit2)
 
@@ -148,8 +148,8 @@ estimates2 <- coef(mylogit2)
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-prob_Marceau2 <- 1 / (1 + exp( - (estimates2[1] + estimates2[7] * 1 + 
-                                    estimates2[11] * 1 + estimates2[13] * 1 + estimates2[14] * 1)))
+prob_Marceau2 <- 1 / (1 + exp( - (estimates2[1] + estimates2[7] * 1 +
+  estimates2[11] * 1 + estimates2[13] * 1 + estimates2[14] * 1)))
 
 print(prob_Marceau2)
 
