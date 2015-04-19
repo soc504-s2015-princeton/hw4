@@ -223,7 +223,7 @@ summary(mylogit1)</code></pre>
 </ol>
 <pre class="r"><code>estimates &lt;- coef(mylogit1)
 
-prob_Marceau &lt;- 1 / (1 + exp(-(estimates[1] + estimates[7] * 1)))
+prob_Marceau &lt;- 1 / (1 + exp( - (estimates[1] + estimates[7] * 1)))
 
 print(prob_Marceau)</code></pre>
 <pre><code>## (Intercept) 
@@ -253,10 +253,13 @@ data %&gt;%
 <pre class="r"><code># &quot;English&quot; is coded as 1, &quot;French&quot; is coded as 2
 
 
-data &lt;- within(data, location &lt;- relevel(location, ref = &quot;other&quot;)) #relevel factors
-data &lt;- within(data, language &lt;- relevel(language, ref = &quot;French&quot;)) #relevel factors
+data &lt;- within(data, 
+               location &lt;- relevel(location, ref = &quot;other&quot;)) #relevel factors
+data &lt;- within(data, 
+               language &lt;- relevel(language, ref = &quot;French&quot;)) #relevel factors
 
-mylogit2 &lt;- glm(decision ~ judge + rater + location + language, data = data, family = &quot;binomial&quot;)
+mylogit2 &lt;- glm(decision ~ judge + rater + location + language, 
+                data = data, family = &quot;binomial&quot;)
 
 summary (mylogit2)</code></pre>
 <pre><code>## 
@@ -298,7 +301,8 @@ summary (mylogit2)</code></pre>
 <ol start="7" style="list-style-type: example">
 <li>For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?</li>
 </ol>
-<pre class="r"><code>prob_Marceau2 &lt;- 1 / (1 + exp(-(estimates2[1] + estimates2[7] * 1 + estimates2[11] * 1 + estimates2[13] * 1 + estimates2[14] * 1)))
+<pre class="r"><code>prob_Marceau2 &lt;- 1 / (1 + exp( - (estimates2[1] + estimates2[7] * 1 + 
+                                    estimates2[11] * 1 + estimates2[13] * 1 + estimates2[14] * 1)))
 
 print(prob_Marceau2)</code></pre>
 <pre><code>## (Intercept) 
