@@ -1,0 +1,162 @@
+---
+title: "Homework 4: Logistic regression and judges"
+author: "Nick Fox"
+date: "Due: Sunday, April 19, 2015"
+output: html_document
+---
+
+This assignment is based on an assignment created by [German Rodriguez](http://data.princeton.edu/wws509/sets/set3.html).  Topics covered include:
+
+- reading in tabular data
+- ggplot2
+- logistic regression
+
+For this assignment you will be extending the analysis in this article:
+
+Greene and Schaffer (1992) ["Leave to Appeal and Leave to Commence Judicial Review in Canada's Refugee-Determination System: Is the Process Fair?"](http://yorkspace.library.yorku.ca/xmlui/handle/10315/7864) International Journal of Refugee Law, 4.1: 71-83.
+
+Here's how the authors describe the paper:
+"The purpose of this study is to determine whether refugees and other persons who are applying for leave to appeal a decision of the Convention Refugee Determination Division of the Canadian Immigration and Refugee Board, a decision of the Appeal Division of the Immigration and Refugee Board, or to commence an action for judicial review have a relatively equal chance to convince the Federal Court of Appeal of the merits of their applications.""
+
+The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regression-2E/datasets/Greene.pdf) were made avaialble by John Fox.  I have stored a copy of the data in Greene.txt in the subfolder data.
+
+
+```{r}
+suppressPackageStartupMessages(require(dplyr))
+suppressPackageStartupMessages(require(ggplot2))
+suppressPackageStartupMessages(require(broom))
+
+data <- read.table("data/Greene.txt")
+```
+
+Before doing anything else, just play with the data to get a sense of it.
+```{r}
+data %>%
+  group_by(decision) %>%
+  summarise(mean_decision = mean(decision))
+# "no" is dummy coded as 1, "yes" is dummy coded as 2
+
+data %>%
+  group_by(decision) %>%
+  summarise(n_decision = n())
+#270 no, 114 yes
+
+data %>%
+  group_by(language) %>%
+summarise(n_language = n())
+#253 English, 131 French
+
+```
+
+(@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
+
+```{r}
+
+decision <- data %>%
+  group_by(decision) %>%
+  summarise(n_decision = n()) %>%
+  mutate(prop_decision = (n_decision / sum(n_decision) * 100))
+
+print(decision)
+
+# Judges granted an appeal in 29.69% of cases.
+```
+
+(@) There are 12 (actually 10) different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
+
+```{r}
+data %>%
+  group_by(judge) %>%
+  summarise(judge_count = n_distinct(judge))
+
+data_case <- data %>%
+  group_by(judge) %>%
+  summarise(judge_case = n()) %>%
+  arrange(desc(judge_case))
+
+print(data_case)
+
+data %>%
+  ggplot(aes(x = judge)) + geom_bar()
+
+```
+
+(@) Now plot the rate at which the judges grant appeals. 
+
+```{r}
+decision_judge <- data %>%
+  group_by(judge, decision) %>%
+  summarise(n_decision = n()) %>%
+  mutate(prop_yes = (n_decision / sum(n_decision) * 100)) %>%
+  filter(decision == "yes")
+
+decision_judge %>%
+  ggplot(aes(x = judge, y = prop_yes)) + geom_bar(stat = "identity")
+```
+
+(@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whether an appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
+
+```{r}
+data <- within(data, judge <- relevel(judge, ref = "Iacobucci"))
+
+mylogit1 <- glm(decision ~ judge, data = data, family = "binomial")
+
+summary(mylogit1)
+
+```
+
+(@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
+
+```{r}
+estimates <- coef(mylogit1)
+
+prob_Marceau <- 1 / (1 + exp(-(estimates[1] + estimates[7] * 1)))
+
+print(prob_Marceau)
+
+#predicted probability of Judge Marceau granting an appeal is 0.6 (matches the observed value).
+
+```
+
+(@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
+
+```{r}
+data %>%
+  group_by(rater) %>%
+  summarise(mean_rater = mean(rater))
+# "no" is coded as 1, "yes" is coded as 2
+
+data %>%
+  group_by(language) %>%
+  summarise(mean_language = mean(language))
+# "English" is coded as 1, "French" is coded as 2
+
+
+data <- within(data, location <- relevel(location, ref = "other")) #relevel factors
+data <- within(data, language <- relevel(language, ref = "French")) #relevel factors
+
+mylogit2 <- glm(decision ~ judge + rater + location + language, data = data, family = "binomial")
+
+summary (mylogit2)
+
+estimates2 <- coef(mylogit2)
+```
+
+(@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
+
+```{r}
+prob_Marceau2 <- 1 / (1 + exp(-(estimates2[1] + estimates2[7] * 1 + estimates2[11] * 1 + estimates2[13] * 1 + estimates2[14] * 1)))
+
+print(prob_Marceau2)
+
+#The predicted probability of Judge Marceau granting an appeal for a case ruled to have merit, in Toronto, and in English is 0.90.
+```
+
+
+#### The command below is helpful for debugging, please don't change it
+
+```{r echo=FALSE}
+sessionInfo()
+```
+
+
