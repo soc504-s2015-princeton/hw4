@@ -1,6 +1,6 @@
 ---
 title: "Homework 4: Logistic regression and judges"
-author: "your name here"
+author: "Andrés Lajous"
 date: "Due: Sunday, April 19, 2015"
 output: html_document
 ---
@@ -22,7 +22,18 @@ The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regre
 
 
 ```{r}
-# [your code here]
+library(ggplot2)
+library(dplyr)
+library(broom)
+
+
+## load data
+data <- read.table("data/Greene.txt") # <- could not load with readr library. data has irregular spacing.
+
+## set data as dplyr table
+data <- tbl_df(data)
+
+
 ```
 
 Before doing anything else, just play with the data to get a sense of it.
@@ -30,43 +41,128 @@ Before doing anything else, just play with the data to get a sense of it.
 (@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
 
 ```{r}
-# [your code here]
+##calcualte the proportion of yes and no decisions by judge
+appeals <- data %>%
+  group_by(decision) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+
+appeals
+
+#[Appeals were granted in ~ 30% of the cases]
+
 ```
 
 (@) There are 12 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
 
 ```{r}
-# [your code here]
+
+## claculate the number of cases per judge
+judges <- data %>%
+  group_by(judge) %>%
+  tally() %>%
+  arrange(desc(n)) %>%
+  mutate(judge = factor(judge, judge)) # change levels so that plot keeps arrange by n
+
+ggplot(judges, aes(judge, n)) + geom_histogram(stat = "identity") + ylab("Cases")
+
+
+
+
 ```
 
 (@) Now plot the rate at which the judges grant appeals. 
 
 ```{r}
-# [your code here]
+##calculate porpotion of appeals granted by judge
+judges_prop <- data %>%
+  group_by(judge, decision) %>%
+  tally() %>%
+  mutate(prop = n / sum(n)) %>%
+  filter(decision == "yes") %>% # only keep those granted
+  ungroup() %>%
+  arrange(desc(prop)) %>%
+  mutate(judge = factor(judge, judge)) # change levels to keep arrange by prop of appeals
+  
+
+ggplot(judges_prop, aes(judge, prop)) + geom_histogram(stat = "identity") +
+  ylab("Proportion")
+
+
+
 ```
 
 (@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whetheran appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
 
 ```{r}
-# [your code here]
+
+##relevel judge factor to have Iacobucci as reference
+data$judge <- relevel(data$judge, ref = "Iacobucci")
+
+##run logistic regression model
+m1 <- glm(decision ~ judge, data = data, family = binomial)
+
+tidy(m1)
+
 ```
 
 (@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
 
 ```{r}
-# [your code here]
+
+## create new data frame to set Marceu fixed
+data_marceau <- data
+## set marceu fixed
+data_marceau$judge <- "Marceau"
+
+## use predict with Marceau fixed
+pp_marceau <- predict(m1, type = "response", newdata = data_marceau)
+
+##calculate mean of predicted values to get predicted probability of observed cases
+mean_marceau <- mean(pp_marceau)
+mean_marceau
+
+#[the predicted probabilty that Marceu will grant an appeal is 0.6]
+
 ```
 
 (@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
 
 ```{r}
-# [your code here]
+
+## relevel location to have "other" as reference
+data$location <- relevel(data$location, ref = "other")
+
+##relevel language and ser French as reference
+data$language <- relevel(data$language, ref = "French")
+
+## run logistic regression model
+m2 <- glm(decision ~ judge + rater + location + language, data = data, family = binomial)
+
+
+tidy(m2)
+
 ```
 
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-# [your code here]
+
+data_ytem <- data
+
+data_ytem$rater <- "yes"
+data_ytem$location <- "Toronto"
+data_ytem$language <- "English"
+data_ytem$judge <- "Marceau"
+
+pp_ytem <- predict(m2, type = "response", newdata = data_ytem)
+
+##calculate mean of predicted values to get predicted probability of observed cases
+mean_ytem <- mean(pp_ytem)
+mean_ytem
+
+#[the predicted probabilty that Marceu will grant an appeal that had merit, took place in Toronto and that was in english is ~ 0.9]
+
 ```
 
 
