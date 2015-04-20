@@ -142,7 +142,8 @@ data$location <- relevel(data$location, ref = "other")
 data$language <- relevel(data$language, ref = "French")
 
 ## run logistic regression model
-m2 <- glm(decision ~ judge + rater + location + language, data = data, family = binomial)
+m2 <- glm(decision ~ judge + rater + location + language,
+          data = data, family = binomial)
 
 
 tidy(m2)
