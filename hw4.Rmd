@@ -63,7 +63,7 @@ judges <- data %>%
   group_by(judge) %>%
   tally() %>%
   arrange(desc(n)) %>%
-  mutate(judge = factor(judge, judge)) # change levels so that 
+  mutate(judge = factor(judge, judge)) # change levels so that
                                        # plot keeps arrange by n
 
 ggplot(judges, aes(judge, n)) +
