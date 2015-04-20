@@ -28,7 +28,8 @@ library(broom)
 
 
 ## load data
-data <- read.table("data/Greene.txt") # <- could not load with readr library. data has irregular spacing.
+data <- read.table("data/Greene.txt") # <- could not load with readr library.
+                                        #  data has irregular spacing.
 
 ## set data as dplyr table
 data <- tbl_df(data)
@@ -62,9 +63,12 @@ judges <- data %>%
   group_by(judge) %>%
   tally() %>%
   arrange(desc(n)) %>%
-  mutate(judge = factor(judge, judge)) # change levels so that plot keeps arrange by n
+  mutate(judge = factor(judge, judge)) # change levels so that 
+                                       # plot keeps arrange by n
 
-ggplot(judges, aes(judge, n)) + geom_histogram(stat = "identity") + ylab("Cases")
+ggplot(judges, aes(judge, n)) +
+  geom_histogram(stat = "identity") +
+  ylab("Cases")
 
 
 
@@ -82,7 +86,8 @@ judges_prop <- data %>%
   filter(decision == "yes") %>% # only keep those granted
   ungroup() %>%
   arrange(desc(prop)) %>%
-  mutate(judge = factor(judge, judge)) # change levels to keep arrange by prop of appeals
+  mutate(judge = factor(judge, judge)) # change levels
+                                        # to keep arrange by prop of appeals
   
 
 ggplot(judges_prop, aes(judge, prop)) + geom_histogram(stat = "identity") +
