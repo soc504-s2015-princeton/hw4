@@ -1,7 +1,7 @@
 ---
 title: "Homework 4: Logistic regression and judges"
-author: "your name here"
-date: "Due: Sunday, April 19, 2015"
+author: "Aaron Kurosu"
+date: "Due: Wednesday, April 22, 2015 (extension)"
 output: html_document
 ---
 
@@ -22,7 +22,14 @@ The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regre
 
 
 ```{r}
-# [your code here]
+library(dplyr)
+library(ggplot2)
+library(broom)
+
+
+
+dat <- read.table("data/Greene.txt", header=TRUE)
+
 ```
 
 Before doing anything else, just play with the data to get a sense of it.
@@ -30,43 +37,103 @@ Before doing anything else, just play with the data to get a sense of it.
 (@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
 
 ```{r}
-# [your code here]
+# languages less likely to have an appeal granted?
+dat %>%
+  select(language, decision) %>%
+  group_by(language) %>%
+  summarise(yes = mean(decision=="yes")) %>%
+  ggplot(aes(x=language, y=yes)) +
+    geom_bar(stat="identity") +
+    ylab("percent appealed granted")
+
+# cases vs. percent appeal granted per nation:
+dat %>%
+  select(nation, decision) %>%
+  ggplot(aes(x=nation, fill=decision)) +
+    geom_bar() +
+    theme(axis.text.x=element_text(angle=90, hjust=1))
+
 ```
 
 (@) There are 12 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
 
 ```{r}
-# [your code here]
+# are the judges fair 50/50 in granting appeal?
+dat %>%
+  select(judge, decision) %>%
+  group_by(judge) %>%
+  summarise(cases = sum(decision)) %>%
+  ggplot(aes(x=judge, y=cases, label=cases)) +
+    geom_bar(stat="identity") +
+    geom_text(vjust=-1) +
+    expand_limits(y=c(0, 100)) +
+    ylab("number of cases")
 ```
 
 (@) Now plot the rate at which the judges grant appeals. 
 
 ```{r}
-# [your code here]
+# are the judges fair 50/50 in granting appeal?
+dat %>%
+  select(judge, decision) %>%
+  group_by(judge) %>%
+  summarise(yes = mean(decision=="yes")) %>%
+  ggplot(aes(x=judge, y=yes)) +
+    geom_bar(stat="identity") +
+    expand_limits(y=c(0, 1)) +
+    ylab("percent of appeals granted")
 ```
 
 (@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whetheran appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
 
 ```{r}
-# [your code here]
+# set judge Iacobucci as reference category :
+dat$judge <- relevel(dat$judge, "Iacobucci")
+
+glm(decision ~ judge, data=dat, family="binomial") %>%
+  summary()
 ```
 
 (@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
 
 ```{r}
-# [your code here]
+print("When compared to judge Iacobucci, the probability judge Marceau will grant an appeal is:")
+
+glm(decision ~ judge, data=dat, family="binomial") %>%
+  tidy() %>%
+  filter(term == "(Intercept)" | term == "judgeMarceau") %>%
+  select(term, estimate) %>%
+  summarise(percent = round((estimate[2]+estimate[1])*100, digits=2))
 ```
 
 (@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
 
 ```{r}
-# [your code here]
+# set other as reference category:
+dat$location <- relevel(dat$location, "other")
+
+# Dummy variable for language set as English because French is treated as ommitted category, i.e. when english isn't true:
+dat <- dat %>%
+  mutate(english = as.integer(language=="English"))
+
+glm(decision ~ judge + rater + location + english, 
+    data=dat, family="binomial") %>%
+  summary()
 ```
 
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-# [your code here]
+print("When compared to judge Iacobucci, the probability judge Marceau will grant an appeal if the case has merit, took place in Toronto, and was in English is:")
+
+glm(decision ~ judge + rater + location + english, 
+    data=dat, family="binomial") %>%
+  tidy() %>%
+  filter(term == "(Intercept)" | term == "judgeMarceau" | 
+           term == "locationToronto" | term =="english") %>%
+  select(term, estimate) %>%
+  summarise(percent = round((estimate[2]+estimate[1]+
+                               estimate[3]+estimate[4])*100, digits=2))
 ```
 
 
