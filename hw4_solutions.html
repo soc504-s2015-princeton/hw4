@@ -170,13 +170,13 @@ tidy(fit)</code></pre>
 </ol>
 <pre class="r"><code>fit_tidy &lt;- tidy(fit)
 predictor_value &lt;- fit_tidy[fit_tidy$term==&quot;(Intercept)&quot;, &quot;estimate&quot;] +
-  fit_tidy[fit_tidy$term==&quot;rater&quot;, &quot;estimate&quot;] +
+  fit_tidy[fit_tidy$term==&quot;rateryes&quot;, &quot;estimate&quot;] +
   fit_tidy[fit_tidy$term==&quot;judgeMarceau&quot;, &quot;estimate&quot;] +
   fit_tidy[fit_tidy$term==&quot;locationToronto&quot;, &quot;estimate&quot;] +
   fit_tidy[fit_tidy$term==&quot;languageEnglish&quot;, &quot;estimate&quot;] 
 predicted_probability &lt;- 1 / (1 + exp(-(predictor_value)))
 print(paste(&quot;The predicted probability for this case is:&quot;, predicted_probability))</code></pre>
-<pre><code>## [1] &quot;The predicted probability for this case is: &quot;</code></pre>
+<pre><code>## [1] &quot;The predicted probability for this case is: 0.897979154560357&quot;</code></pre>
 <div id="the-command-below-is-helpful-for-debugging-please-dont-change-it" class="section level4">
 <h4>The command below is helpful for debugging, please don’t change it</h4>
 <pre><code>## R version 3.1.2 (2014-10-31)
@@ -195,7 +195,7 @@ print(paste(&quot;The predicted probability for this case is:&quot;, predicted_p
 ##  [1] assertthat_0.1   colorspace_1.2-4 DBI_0.3.1        digest_0.6.8    
 ##  [5] evaluate_0.5.5   formatR_1.0      grid_3.1.2       gtable_0.1.2    
 ##  [9] htmltools_0.2.6  knitr_1.9        labeling_0.3     lazyeval_0.1.10 
-## [13] magrittr_1.5     MASS_7.3-35      mnormt_1.5-1     munsell_0.4.2   
+## [13] magrittr_1.5     MASS_7.3-40      mnormt_1.5-1     munsell_0.4.2   
 ## [17] parallel_3.1.2   plyr_1.8.1       proto_0.3-10     psych_1.5.1     
 ## [21] Rcpp_0.11.4      reshape2_1.4.1   rmarkdown_0.5.1  scales_0.2.4    
 ## [25] stringr_0.6.2    tidyr_0.2.0      tools_3.1.2      yaml_2.1.13</code></pre>
