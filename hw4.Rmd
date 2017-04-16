@@ -1,6 +1,6 @@
 ---
 title: "Homework 4: Logistic regression and judges"
-author: "your name here"
+author: "Kyonne"
 date: "Due: Sunday, April 19, 2015"
 output: html_document
 ---
@@ -22,7 +22,12 @@ The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regre
 
 
 ```{r}
-# [your code here]
+suppressPackageStartupMessages(require(dplyr))
+suppressPackageStartupMessages(require(ggplot2))
+suppressPackageStartupMessages(require(broom))
+
+dat <- read.table("data/Greene.txt", header=TRUE)
+#View(dat)
 ```
 
 Before doing anything else, just play with the data to get a sense of it.
@@ -30,43 +35,98 @@ Before doing anything else, just play with the data to get a sense of it.
 (@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
 
 ```{r}
-# [your code here]
+dat.decide.all <- dat %>%
+  group_by(judge) %>%
+  summarise(all = n())
+
+dat.appeal <- dat %>%
+  group_by(judge) %>%
+  filter(decision == "yes") %>%
+  summarise(decision = n())
+
+appeal.table <- full_join(dat.decide.all, dat.appeal, by = "judge") %>%
+  mutate(prop.appeal = decision / all)
+
 ```
 
 (@) There are 12 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
 
 ```{r}
-# [your code here]
+#I only count 10 different judges in the data!
+dat %>%
+  group_by(judge) %>%
+  summarise(n())
+
+#Graph:
+graph1 <- ggplot(data = dat.decide.all, 
+                 aes(x = judge, y = all, fill = judge))
+graph1 +  geom_bar(stat = "identity", 
+           colour = "black", 
+           position="dodge",
+           show_guide = FALSE) +
+  xlab("Judge Name") +
+  ylab("Number of Cases") +
+  ggtitle("Number of Cases for Each Judge") +
+  theme_bw() 
 ```
 
 (@) Now plot the rate at which the judges grant appeals. 
 
 ```{r}
-# [your code here]
+graph2 <- ggplot(data = appeal.table, 
+                 aes(x = judge, y = prop.appeal, fill = judge))
+graph2 +  geom_bar(stat = "identity", 
+           colour = "black", 
+           width = 0.7, 
+           position="dodge",
+           show_guide = FALSE) +
+  xlab("Judge Name") +
+  ylab("Proportion of Cases Granted an Appeal") +
+  ggtitle("Proportion of Cases\nGranted an Appeal for each Judge") +
+  theme_bw() 
 ```
 
 (@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whetheran appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
 
 ```{r}
-# [your code here]
+#Change reference level:
+levels(dat$judge)
+dat2 <- within(dat, judge <- relevel(judge, ref = "Iacobucci"))
+##check that levels have been adjusted:
+levels(dat2$judge)
+
+#Logistic regression:
+m1 <- glm(decision ~ judge, data = dat2, family = "binomial")
+m1 <- tidy(m1)
+m1
 ```
 
 (@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
 
 ```{r}
-# [your code here]
+(exp(m1$estimate[1] + m1$estimate[7])) / (1 + exp(m1$estimate[1] + m1$estimate[7]))
+
 ```
 
 (@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
 
 ```{r}
-# [your code here]
+#Relevel factors:
+dat3 <- within(dat2, location <- relevel(location, ref = "other"))
+dat4 <- within(dat3, language <- relevel(language, ref = "French"))
+
+#Logistic regression:
+m2 <- glm(decision ~ judge + rater + location + language, 
+          data = dat4, family = "binomial")
+
+m2 <- tidy(m2)
+m2
 ```
 
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-# [your code here]
+plogis(m2$estimate[1] + m2$estimate[7] + m2$estimate[11] + m2$estimate[13] + m2$estimate[14])
 ```
 
 
