@@ -1,6 +1,6 @@
 ---
 title: "Homework 4: Logistic regression and judges"
-author: "your name here"
+author: "Leah Reisman"
 date: "Due: Sunday, April 19, 2015"
 output: html_document
 ---
@@ -22,7 +22,7 @@ The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regre
 
 
 ```{r}
-# [your code here]
+data <- read.table("data/Greene.txt")
 ```
 
 Before doing anything else, just play with the data to get a sense of it.
@@ -30,43 +30,70 @@ Before doing anything else, just play with the data to get a sense of it.
 (@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
 
 ```{r}
-# [your code here]
+counts <- table(data$decision)
+prop.table(counts)
 ```
 
-(@) There are 12 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
+(@) There are 10 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
 
 ```{r}
-# [your code here]
+library(ggplot2)
+
+h <- ggplot(data, aes(x = judge))
+h + geom_bar()
 ```
 
 (@) Now plot the rate at which the judges grant appeals. 
 
 ```{r}
-# [your code here]
+library(dplyr)
+data$decision <- ifelse(data$decision == "yes", 1, 0)
+
+data <- data %>%
+  group_by(judge) %>%
+  mutate(rate.appeal = mean(decision))
+
+k <- ggplot(data, aes(x = judge, y = rate.appeal))
+k + geom_point()
 ```
 
 (@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whetheran appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
 
 ```{r}
-# [your code here]
+data$judge <- relevel(data$judge, ref = "Iacobucci" )
+
+fit <- glm(decision ~ judge, data = data, family ="binomial")
+
+summary(fit)
 ```
 
 (@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
 
 ```{r}
-# [your code here]
+coefs <- coef(fit)
+prob.a <- 1/(1 + exp(-(coefs[1] + coefs[6]*1)))
+print(prob.a)
 ```
 
 (@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
 
 ```{r}
-# [your code here]
+data$rater <- ifelse(data$rater == "yes", 1, 0)
+data$location <- relevel(data$location, ref = "other")
+data <- data %>%
+  mutate(lang.dummy = as.numeric(language == "English"))
+
+fit2 <- glm(decision ~ judge + rater + location + lang.dummy, data = data, family ="binomial")
+
+summary(fit2)
 ```
 
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-# [your code here]
+coefs2 <- coef(fit2)
+prob.a2 <- 1/(1 + exp(-(coefs2[1] + coefs2[6]*1 + coefs2[11]*1 + coefs2[13]*1 + coefs2[14]*1)))
+print(prob.a2)
 ```
 
 
