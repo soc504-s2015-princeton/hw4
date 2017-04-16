@@ -1,6 +1,6 @@
 ---
 title: "Homework 4: Logistic regression and judges"
-author: "your name here"
+author: "Megan Blanchard"
 date: "Due: Sunday, April 19, 2015"
 output: html_document
 ---
@@ -22,7 +22,13 @@ The data and [documentation](http://socserv.mcmaster.ca/jfox/Books/Applied-Regre
 
 
 ```{r}
-# [your code here]
+library(foreign)
+library(dplyr)
+library(ggplot2)
+
+data <- read.dta("http://data.princeton.edu/wws509/datasets/greene.dta")
+
+   
 ```
 
 Before doing anything else, just play with the data to get a sense of it.
@@ -30,43 +36,71 @@ Before doing anything else, just play with the data to get a sense of it.
 (@) The main outcome of interest is *decision* which records whether the judge granted an appeal or not.  In what proprotion of cases did the judge grant an appeal.
 
 ```{r}
-# [your code here]
+data %>%
+  select(decision) %>%
+  mutate(decision.dummy = ifelse(decision == "no", 0,
+                          ifelse(decision == "yes", 1, NA))) %>%
+  summarise(prop.granted = mean(decision.dummy))
 ```
 
 (@) There are 12 different judges in the data. A key question is whether different judges have different rates of granting an appeal.  Make a plot showing the number of cases per judge.
 
 ```{r}
-# [your code here]
+data.prop.granted <- data %>%
+  select(decision, judge) %>%
+  mutate(decision.dummy = ifelse(decision == "no", 0,
+                          ifelse(decision == "yes", 1, NA))) %>%
+  group_by(judge) %>%
+  summarise(prop.granted = mean(decision.dummy)) %>%
+  arrange(prop.granted)
+
+data.prop.granted 
 ```
 
 (@) Now plot the rate at which the judges grant appeals. 
 
 ```{r}
-# [your code here]
+ggplot(data= data.prop.granted, aes(judge, prop.granted)) + geom_point()
 ```
 
 (@) Now let's try this with logistic regression because we are going to move to more complicated models.  Fit a logistic regression predicting whetheran appeal will be granted using judge as a categorical predictor. Use Iacobucci as the reference judge to facilitate the comparisons that follow. For more on how to control the reference level of a factor, check out this post on StackOverflow: http://stackoverflow.com/questions/3872070/how-to-force-r-to-use-a-specified-factor-level-as-reference-in-a-regression
 
 ```{r}
-# [your code here]
+data <- data %>%
+  mutate(decision.dummy = ifelse(decision == "no", 0,
+                          ifelse(decision == "yes", 1, NA)),
+         judge= as.factor(judge))
+data$judge <- relevel(data$judge, ref="Iacobucci")
+reg <- glm(decision.dummy ~ judge, family="binomial", data=data)
+
+
 ```
 
 (@) Using the results of the model calculate the predicted probability that Judge Marceau will grant an appeal.
 
 ```{r}
-# [your code here]
+pp <- coef(reg)
+plogis(pp[1] + pp["judgeMarceau"])
+#the predicted probability that Judge Marceau will grant an appeal is 60% 
+   
 ```
 
 (@) Perhaps the different judges have different types of cases.  That might be why they seem to be making such different decisions.  Fit a model treating judge as a factor plus the following predictors: (i) an indicator for whether the expert rater thought the case had merit, (ii) location indicators using 'other' as the reference category, (iii) a language dummy with French as omitted category.  Note that as above you might have to relevel the factors to get this to work as you want.
 
 ```{r}
-# [your code here]
+data$city <- relevel(as.factor(data$city), ref="other")
+data$language <- relevel(as.factor(data$language),ref="French")
+reg2 <- glm(decision.dummy ~ judge + merit + city + language, family=binomial, data=data)
+
+
 ```
 
 (@) For a case that was ruled to have merit, that took place in Toronto, and that was in English, what is the predicted probability that Judge Marceau will grant the appeal?
 
 ```{r}
-# [your code here]
+pp2 <- coef(reg2)
+plogis(pp2[1] + pp2["judgeMarceau"] + pp2["merityes"] +pp2["languageEnglish"] +pp2["cityToronto"])
+#the predicted probability that Judge Marceau will grant an appeal for a case that was ruled to have merit, that took place in Toronto, and that was in English  is 90% 
 ```
 
 
